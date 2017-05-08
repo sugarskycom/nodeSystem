@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <link rel="stylesheet" href="node_modules/bootstrap/dist/css/bootstrap.css">
+    <style>
+        ul li{
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="row">
+        <div class="col-md-12">
+            <form class="form-horizontal" name="myForm">
+                <div class="form-group">
+                    <label for="bookName" class="control-label col-md-3">书名</label>
+                    <div class="col-md-6">
+                        <input type="text" id="bookName" class="form-control" placeholder="请输入书名"  name="bookName">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="bookPirce" class="control-label col-md-3">书价</label>
+                    <div class="col-md-6">
+                        <input type="text" id="bookPirce" class="form-control" placeholder="请输入书价"  name="bookPrice">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="col-md-6 col-md-offset-3">
+                        <button class="btn btn-primary add" type="button">添加</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    <ul class="list-group">
+        <li class="list-group-item" >
+            <button class="btn btn-default pull-right">&times;</button>
+        </li>
+    </ul>
+</div>
+<div class="modal fade" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title">请修改~~~</h4>
+            </div>
+            <div class="modal-body" name="newForm">
+                书名 <input type="text" id="newName"> 书价 <input type="text" id="newPrice">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">关闭</button>
+                <button type="button" class="btn btn-primary" onclick="newItem()">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script src="node_modules/jquery/dist/jquery.js"></script>
+<script src="node_modules/bootstrap/dist/js/bootstrap.js"></script>
+<script>
+    let oUl = document.querySelector('.list-group');
+    let oBtn = document.querySelector('.add');
+    let myForm = document.getElementsByName('myForm')[0];
+    let newForm = document.getElementsByName('newForm')[0];
+    //表单序列化
+    function serialize(form) {
+        let eles = form.elements;
+        let result = {};
+        for(let i = 0 ; i < eles.length ; i++){
+            let cur = eles[i];
+            if(cur.type === 'text'){//如果是输入框，我们要将他的name属性和value属性组成一个对象
+                result[cur.name] = cur.value;
+            }
+        }
+        return result;//返回序列化后的对象
+    }
+    oBtn.addEventListener('click',function () {
+        let result = serialize(myForm);
+        ajax({
+            url : '/book',
+            type : 'POST',
+            data : JSON.stringify(result),
+            success(data){
+                show(data);
+            }
+        })
+    });
+
+//1.ajax请求拿会数据
+    function ajax({url='',type='GET',data=null,dataType='json',async=true,success=null}){
+        let xhr = new XMLHttpRequest();
+        xhr.open(type,url,async);
+        xhr.responseType = dataType;
+        xhr.onload = function () {
+            success(xhr.response);
+        };
+        xhr.send(data);
+    }
+
+    function show(data) {
+        let str = '';
+        data.forEach(item=>{
+            str +=`
+                       <li class="list-group-item">
+                             书名:${item.bookName} 书价:${item.bookPrice}
+                             <button class="btn btn-default btn-xs pull-right" onclick="remove(${item.id})">&times;</button>
+                              <button onclick="change(${item.id},'${item.bookName}','${item.bookPrice}')" type="button" class="btn btn-warning btn-xs pull-right" data-toggle="modal" data-target=".modal">
+   修改
+</button>
+                       </li>
+                       `
+        });
+        oUl.innerHTML = str;
+    }
+
+    ajax({
+        url : '/book',
+        success(data){
+            show(data);
+        }
+    });
+
+    function remove(id) {
+        ajax({
+            url : '/book?id='+id,
+            type : 'DELETE',
+            success(data){
+                show(data);
+            }
+        })
+    }
+
+    let newName = document.getElementById('newName');
+    let newPrice = document.getElementById('newPrice');
+    let newId = '';
+
+    function change(id,name,price) {
+        newName.value = name;
+        newPrice.value = price;
+        newId = id;
+    }
+
+    function newItem(data) {
+        ajax({
+            url : '/book?id='+newId,
+            type : 'PUT',
+            data :JSON.stringify({
+                id : newId,
+                bookName : newName,
+                bookPrice : newPrice
+            }),
+            success(data){
+                show(data);
+                $('.modal').modal('toggle');
+            }
+        });
+    }
+</script>
+</body>
+</html>
